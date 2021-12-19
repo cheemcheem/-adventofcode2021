@@ -34,7 +34,7 @@ class Index {
           type: "number",
           optional: true,
           describe:
-            "Run example input rather than real input for the given part/day.",
+            "Run example input (usually 1 or 2) rather than real input for the given part/day.",
           alias: "e",
         },
       })
@@ -63,8 +63,10 @@ class Index {
       .usage("$0 run -d [day] -e")
       .usage("$0 run -d [day] -p [part]")
       .usage("$0 run -d [day] -p [part] -e")
+      .usage("$0 run -d [day] -p [part] -e [ex]")
       .usage("$0 run -l")
       .usage("$0 run -l -e")
+      .usage("$0 run -l -e [ex]")
       .showHelpOnFail(true, "This can't be run with these options.")
       .parse();
     if (!result) return;
