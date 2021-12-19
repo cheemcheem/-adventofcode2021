@@ -1,38 +1,49 @@
-import {Day, ERROR_MESSAGE} from "../common";
+import { Day, ERROR_MESSAGE } from "../common";
 
 export default class Day1 extends Day {
-
   protected readonly dayNumber = 1;
 
   part1 = async () => {
-    const expenses = this.getSplitString().map(Number);
+    const distances = this.getSplitString().map(Number);
 
-    for (const i of expenses) {
-      for (const j of expenses) {
-        if (i === j) continue;
-        if (i + j === 2020) {
-          return i * j;
+    return distances
+      .map((dist, index) => {
+        if (index === 0) {
+          return 0;
         }
-      }
-    }
-    throw ERROR_MESSAGE;
+
+        if (distances[index - 1] < dist) {
+          return 1;
+        }
+
+        return 0;
+      })
+      .map(Number)
+      .reduce((a, b) => a + b);
   };
 
-
   part2 = async () => {
-    const expenses = this.getSplitString().map(Number);
+    const distances = this.getSplitString().map(Number);
 
-    for (const i of expenses) {
-      for (const j of expenses) {
-        if (i === j) continue;
-        for (const k of expenses) {
-          if (j === k) continue;
-          if (i + j + k === 2020) {
-            return i * j * k;
-          }
+    const reduce = (index: number) =>
+      distances.slice(index - 1, index + 2).reduce((a, b) => a + b);
+
+    return distances
+      .map((_, index) => {
+        if (index < 2 || index === distances.length - 1) {
+          return 0;
         }
-      }
-    }
-    throw ERROR_MESSAGE;
+
+        const prevThree = reduce(index - 1);
+        const currentThree = reduce(index);
+
+        if (prevThree < currentThree) {
+          return 1;
+        }
+
+        return 0;
+      })
+      .map(Number)
+      .reduce((a, b) => a + b);
   };
 }

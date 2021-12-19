@@ -1,113 +1,112 @@
-import {Day} from "../common";
+import { number } from "yargs";
+import { Day, ERROR_MESSAGE } from "../common";
 
 export default class Day4 extends Day {
-
   protected readonly dayNumber = 4;
 
-  part1 = async () => {
-    const passports = this.getDoubleSplitString();
-    const required = ['byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid'];
-    return passports
-    .map(passport => passport
-        .split(/([\n ])/)
-        .filter(detail => detail !== '\n' && detail !== ' ')
-    )
-    .map(passport => {
-      const mapped = passport.map(detail => {
-        const split = detail.split(":");
-        const val: Record<string, string> = {};
-        val[split[0]] = split[1];
-        return val;
-      });
-      return mapped.reduce((a, b) => ({...a, ...b}));
-    })
-    .filter(passport => {
-      const properties = Object.getOwnPropertyNames(passport);
-      return required.every(property => properties.includes(property));
-    }).length;
-  }
+  isSolved = (numberGrid: number[][]) => (drawnNumbers: number[]) => {
+    const length = numberGrid.length;
+    const arrayMatches = (array: number[]) =>
+      array.filter((item) => drawnNumbers.includes(item)).length === length;
 
-
-  part2 = async () => {
-    const passports = this.getDoubleSplitString();
-    const required = ['byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid'];
-
-    interface RequiredType {
-      byr: string,
-      iyr: string,
-      eyr: string,
-      hgt: string,
-      hcl: string,
-      ecl: string,
-      pid: string,
-      cid?: string
+    for (const row of numberGrid) {
+      if (arrayMatches(row)) {
+        return numberGrid;
+      }
     }
 
+    for (let colI = 0; colI < length; colI++) {
+      const col = numberGrid.map((row) => row[colI]);
+      if (arrayMatches(col)) {
+        return numberGrid;
+      }
+    }
 
-    return passports
-    .map(passport => passport
-        .split(/([\n ])/)
-        .filter(detail => detail !== '\n' && detail !== ' ')
-    )
-    .map(passport => {
-      const mapped = passport.map(detail => {
-        const split = detail.split(":");
-        const val: Record<string, string> = {};
-        val[split[0]] = split[1];
-        return val;
-      });
-      return mapped.reduce((a, b) => ({...a, ...b})) as unknown as RequiredType;
-    })
-    .filter(passport => {
-      const properties = Object.getOwnPropertyNames(passport);
-      return required.every(property => properties.includes(property));
-    })
-    .filter(({byr, iyr, eyr, hgt, hcl, ecl, pid}: RequiredType) => {
-      if (byr.match(/^\d{4}$/) === null) {
-        return false;
-      }
-      const byrNum = Number(byr);
-      if (byrNum < 1920 || byrNum > 2002) {
-        return false;
-      }
+    return false;
+  };
 
-      if (iyr.match(/^\d{4}$/) === null) {
-        return false;
-      }
-      const iyrNum = Number(iyr);
-      if (iyrNum < 2010 || iyrNum > 2020) {
-        return false;
-      }
+  part1 = async () => {
+    const { numberGrids, drawNumbers } = this.getInputs();
 
-      if (eyr.match(/^\d{4}$/) === null) {
-        return false;
+    let solved: undefined | number[][] = undefined;
+    const checkGridsSolved = numberGrids.map(this.isSolved);
+    let currentDrawIndex = 0;
+    for (
+      ;
+      currentDrawIndex < drawNumbers.length && !solved;
+      currentDrawIndex++
+    ) {
+      const currentDraw = drawNumbers.slice(0, currentDrawIndex);
+      for (let checkGrid of checkGridsSolved) {
+        const checkResult = checkGrid(currentDraw);
+        if (checkResult) {
+          solved = checkResult;
+          break;
+        }
       }
-      const eyrNum = Number(eyr);
-      if (eyrNum < 2020 || eyrNum > 2030) {
-        return false;
-      }
+    }
 
-      if (hgt.match(/^\d+(cm|in)$/) === null) {
-        return false;
-      }
-      const hgtCm = hgt.includes("cm");
-      const hgtNum = Number(hgt.split(hgtCm ? "cm" : "in")[0]);
-      if (hgtCm
-          ? (hgtNum < 150 || hgtNum > 193)
-          : (hgtNum < 59 || hgtNum > 76)) {
-        return false;
-      }
+    if (solved) {
+      const drawnNumbers = drawNumbers.slice(0, currentDrawIndex - 1);
+      return this.calculateScore(drawnNumbers, solved);
+    }
 
-      if (hcl.match(/^#[0-9a-f]{6}$/) === null) {
-        return false;
+    return 0;
+  };
+
+  part2 = async () => {
+    const { numberGrids, drawNumbers } = this.getInputs();
+
+    const checkGridsSolved = numberGrids.map(this.isSolved);
+    let currentDrawIndex = 0;
+    const boardsWonIndex = new Map<number[][], number>();
+
+    for (; currentDrawIndex < drawNumbers.length; currentDrawIndex++) {
+      const currentDraw = drawNumbers.slice(0, currentDrawIndex);
+      for (let checkGrid of checkGridsSolved) {
+        const checkResult = checkGrid(currentDraw);
+        if (checkResult) {
+          if (boardsWonIndex.has(checkResult)) {
+            continue;
+          }
+          boardsWonIndex.set(checkResult, currentDrawIndex);
+        }
       }
+    }
 
-      if (ecl.match(/^(amb|blu|brn|gry|grn|hzl|oth)$/) === null) {
-        return false;
-      }
+    if (boardsWonIndex.size > 0) {
+      const [solved, solvedDrawIndex] = Array.from(boardsWonIndex).reduce(
+        (a, b) => (a[1] > b[1] ? a : b)
+      );
+      const drawnNumbers = drawNumbers.slice(0, solvedDrawIndex);
+      return this.calculateScore(drawnNumbers, solved);
+    }
 
-      return pid.match(/^\d{9}$/) !== null;
+    return 0;
+  };
 
-    }).length;
+  private getInputs() {
+    const [input, ...grids] = this.getDoubleSplitString();
+
+    const drawNumbers = input.split(",").map(Number);
+
+    const numberGrids = grids.map((grid) =>
+      grid.split("\n").map((row) =>
+        row
+          .split("  ")
+          .flatMap((s) => s.trim().split(" "))
+          .map(Number)
+      )
+    );
+    return { numberGrids, drawNumbers };
+  }
+
+  private calculateScore(drawnNumbers: number[], solved: number[][]) {
+    const sum = solved
+      .flatMap((s) => s)
+      .filter((s) => !drawnNumbers.includes(s))
+      .reduce((a, b) => a + b);
+    const lastDrawn = drawnNumbers[drawnNumbers.length - 1];
+    return sum * lastDrawn;
   }
 }
